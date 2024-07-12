@@ -137,12 +137,13 @@ if __name__=="__main__":
         proc_settings = json.load(file)
     
     while True:
-        start_time = time.time()
+        current_time = time.time()
         images = process_images(image_directory, proc_settings)
         labels = classify_images(images)
         quants = quantify_images(labels)
         publish_to_slate(quants, pub)
-        print(time.time()-start_time)
-        print('sleeping...')
-        time.sleep(processing_interval)
+        elapsed_time = time.time() - current_time
+        if elapsed_time < processing_interval:
+            print('sleeping for ' + str(elapsed_time) + ' seconds')
+            time.sleep(processing_interval - elapsed_time)
         
