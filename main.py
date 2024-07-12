@@ -43,6 +43,14 @@ def load_image(image_path, proc_settings):
     return output['image']
 
 def classify_images(image_list):
+    """ Using a trained model, convert images to labels and return them
+
+    Args:
+        image_list (list): List of images to classify
+
+    Returns:
+        list: list of labels
+    """
     
     labels = []
     if image_list is not None:
@@ -79,19 +87,40 @@ def process_images(image_directory, proc_settings):
     return lables
 
 def quantify_images(labels, elapsed_time=30):
+    """ Convert labels into quantitative abundance estimates
+
+    Args:
+        labels (list): list of labels
+        elapsed_time (int, optional): duration over which the images were collected. Defaults to 30.
+
+    Returns:
+        list: list of abundances in #/ml
+    """
     
     counts = np.zeros(num_labels)
     for l in labels:
         counts[l] += 1
         
     expected_concentration = counts / (elapsed_time * cameras_fps * imaged_volume)
+    print(expected_concentration)
     
     return expected_concentration
 
 def publish_to_slate(expected_concentration, pub):
+    """ publish concentration estimate to the tethys_slate channel
+
+    Args:
+        expected_concentration (list): list of concentration estimates
+        pub (LcmPublisher): publisher object
+    """
+    # map the concentrations into a single float value (for now just pick one category)
+    diatom_concentration = expected_concentration[3]
     
-    # lcm stuff here
-    pass    
+    # publish to the slate
+    pub.msg.epochMillisec = int(time.time() * 1000)
+    pub.add_float('._planktivore_diatoms', unit='n/a', val=np.float32(diatom_concentration))
+    pub.publish('tethys_slate')
+    
 
 
 if __name__=="__main__":
