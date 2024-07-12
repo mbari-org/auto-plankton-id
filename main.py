@@ -144,6 +144,6 @@ if __name__=="__main__":
         publish_to_slate(quants, pub)
         elapsed_time = time.time() - current_time
         if elapsed_time < processing_interval:
-            print('sleeping for ' + str(elapsed_time) + ' seconds')
+            print('sleeping for ' + str(processing_interval - elapsed_time) + ' seconds')
             time.sleep(processing_interval - elapsed_time)
         
