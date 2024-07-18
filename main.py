@@ -8,8 +8,12 @@ import time
 import random
 import libs.cvtools as cvtools
 
-
 import numpy as np
+import torch
+#import torchvision.models as models 
+from torchvision.transforms import transforms
+from PIL import Image
+import pandas as pd
 
 from LCM.Publisher import LcmPublisher 
 
@@ -17,12 +21,69 @@ image_directory = '/NVMEDATA/images_to_classify'
 processing_interval = 30
 cameras_fps = 10 # frames per second
 imaged_volume = 0.0001 # volume in ml
-num_labels = 14
 
-SAVE_IMAGES = False
+labels_map = {
+    0: "Aggregate",
+    1: "Bad_Mask",
+    2: "Blurry",
+    3: "Camera_Ring",
+    4: "Ciliate",
+    5: "Copepod",
+    6: "Diatom:_Long_Chain",
+    7: "Diatom:_Long_Single",
+    8: "Diatom:_Spike_Chain",
+    9: "Diatom:_Sprial_Chain",
+    10: "Diatom:_Square_Single",
+    11: "Dinoflagellate:_Circles",
+    12: "Dinoflagellate:_Horns",
+    13: "Phaeocystis",
+    14: "Radiolaria"
+}
+
+num_labels = len(labels_map)
+
+SAVE_IMAGES = True
+DELETE_IMAGES = False
+
+
+transform = transforms.Compose([ 
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+
+# def create_image_csv():
+#     print("Saving CSV")
+
+#     folder_path = '.'
+#     data = {
+#         "image": [],
+#         "label": []
+#     }
+#     #loop through training_data to see all the training dirs, then loop through the training dirs to get all the images. Then save image file name and it's file label in a csv.
+#     for dirs in os.listdir(folder_path):
+#         working_dir = os.path.join(folder_path, dirs)
+#         for files in os.listdir(working_dir):
+#             data["image"].append(files)
+#             data["label"].append(dirs)
+
+#     df = pd.DataFrame(data)
+#     # This creates the csv name: ISO date format
+#     filename = time.strftime("%Y-%m-%dT%H:%M.csv", time.gmtime())
+#     directory_name=time.strftime("%Y-%m-%d", time.gmtime())
+
+#     # Try to save the CSV, If you can't, error out.
+#     try:
+#         path = os.path.join("History", "CSVs")
+#         path = os.path.join(path, directory_name)
+#         os.makedirs(path, exist_ok = TrueSAVE_IMAGES)
+#         df.to_csv(os.path.join(path, filename), header=False, index=False)
+#     except OSError as error:
+#         print(error)
 
 def load_image(image_path, proc_settings):
-    """ loads a raw tif image from disk and converts to a processed image
+    """ loads a raw tif image from disk and convertSAVE_IMAGESs to a processed image
 
     Args:
         image_path (str): full path to the image
@@ -51,11 +112,23 @@ def classify_images(image_list):
     Returns:
         list: list of labels
     """
-    
+    ###TODO###
     labels = []
     if image_list is not None:
         for image in image_list:
-            labels.append(random.randint(0,num_labels-1))
+             # Apply transformation and move to device
+            #print(type(image))
+            if isinstance(image, int):
+                print(image)
+            else:
+                print ("I am categoring")
+                image_tensor = transform(Image.fromarray(image)).unsqueeze(0).to(device)
+                outputs = model(image_tensor)
+                _, predicted = torch.max(outputs, 1)
+                predicted_label = predicted.item()
+                #predicted_label = labels_map[predicted_label]
+                labels.append(predicted_label)
+                #labels.append(random.randint(0,num_labels-1))
             
     return labels
 
@@ -66,7 +139,7 @@ def process_images(image_directory, proc_settings):
         image_directory (str): directory of tif images
         proc_settings (dict): processing settings
 
-    Returns:
+    Returns: 
         list: list of labels assigned to the images
     """
     image_list = sorted(glob.glob(os.path.join(image_directory, '*.tif')))
@@ -76,7 +149,8 @@ def process_images(image_directory, proc_settings):
     for image_path in image_list:
         img = load_image(image_path, proc_settings)
         if img is not None:
-            os.remove(image_path)
+            if DELETE_IMAGES:
+                os.remove(image_path)
             processed_image_list.append(img)
             if SAVE_IMAGES:
                 cv2.imwrite(image_path+'.jpg', img)
@@ -135,15 +209,23 @@ if __name__=="__main__":
     # load settings
     with open('ptvr_proc_settings.json') as file:
         proc_settings = json.load(file)
+
+    # load machine learning model
+    #model = models.resnet18(weights='DEFAULT')
+    model = torch.load('HM_model.pth')
+    model.eval()  # Set the model to evaluation mode
+    torch.no_grad()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
     
-    while True:
-        current_time = time.time()
-        images = process_images(image_directory, proc_settings)
-        labels = classify_images(images)
-        quants = quantify_images(labels)
-        publish_to_slate(quants, pub)
-        elapsed_time = time.time() - current_time
-        if elapsed_time < processing_interval:
-            print('sleeping for ' + str(processing_interval - elapsed_time) + ' seconds')
-            time.sleep(processing_interval - elapsed_time)
+    #while True:
+    current_time = time.time()
+    labels = process_images(image_directory, proc_settings)
+    #labels = classify_images(images)
+    quants = quantify_images(labels)
+    publish_to_slate(quants, pub)
+    elapsed_time = time.time() - current_time
+    if elapsed_time < processing_interval:
+        print('sleeping for ' + str(processing_interval - elapsed_time) + ' seconds')
+        time.sleep(processing_interval - elapsed_time)
         
