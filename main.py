@@ -303,22 +303,22 @@ if __name__=="__main__":
     # create inital categorized files
     init_categoried_files()
     
-    #while True:
-    current_time = time.time()
+    while True:
+        current_time = time.time()
 
-    # Used for categorized files. Time is taken here to prevented every image getting it's own directory
-    ISO_time = time.strftime("%Y-%m-%dT%H-%M-%S", time.gmtime())
-    ISO_date, ISO_time = ISO_time.split('T')
+        # Used for categorized files. Time is taken here to prevented every image getting it's own directory
+        ISO_time = time.strftime("%Y-%m-%dT%H-%M-%S", time.gmtime())
+        ISO_date, ISO_time = ISO_time.split('T')
 
-    images, img_names = process_images(image_directory, proc_settings)
+        images, img_names = process_images(image_directory, proc_settings)
     
-    print(f"Processed {len(images)} images.")
+        print(f"Processed {len(images)} images.")
 
-    labels = classify_images(images, img_names, ISO_date, ISO_time)
-    quants = quantify_images(labels)
-    publish_to_slate(quants, pub)
-    elapsed_time = time.time() - current_time
-    if elapsed_time < processing_interval:
-        print('sleeping for ' + str(processing_interval - elapsed_time) + ' seconds')
-        time.sleep(processing_interval - elapsed_time)
+        labels = classify_images(images, img_names, ISO_date, ISO_time)
+        quants = quantify_images(labels)
+        publish_to_slate(quants, pub)
+        elapsed_time = time.time() - current_time
+        if elapsed_time < processing_interval:
+            print('sleeping for ' + str(processing_interval - elapsed_time) + ' seconds')
+            time.sleep(processing_interval - elapsed_time)
         
