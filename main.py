@@ -7,7 +7,7 @@ import json
 import time
 import random
 import libs.cvtools as cvtools
-
+####Import logging to log everything this program prints
 import numpy as np
 import torch
 #import torchvision.models as models 
@@ -46,8 +46,8 @@ categorized_list = ("Aggregate", "Ciliate", "Diatom", "Dinoflagellate", "Other")
 
 num_labels = len(categorized_list)
 
-SAVE_IMAGES = True
-DELETE_IMAGES = False
+SAVE_IMAGES = False
+DELETE_IMAGES = True
 
 
 transform = transforms.Compose([ 
@@ -273,8 +273,8 @@ def publish_to_slate(expected_concentration, pub):
     
     # publish to the slate
     pub.msg.epochMillisec = int(time.time() * 1000)
-    pub.add_float('._planktivore_diatoms', unit='n/a', val=np.float32(diatom_concentration))
-    pub.add_float('._planktivore_dinoflagellates', unit='n/a', val=np.float32(dinoflagellate_concentration))
+    pub.add_float('_.planktivore_diatoms', unit='n/a', val=np.float32(diatom_concentration))
+    pub.add_float('_.planktivore_dinoflagellates', unit='n/a', val=np.float32(dinoflagellate_concentration))
 
     pub.publish('tethys_slate')
     
