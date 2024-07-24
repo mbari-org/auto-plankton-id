@@ -312,7 +312,7 @@ if __name__=="__main__":
 
     images, img_names = process_images(image_directory, proc_settings)
     
-    print(f"Processed {len(images} images.")
+    print(f"Processed {len(images)} images.")
 
     labels = classify_images(images, img_names, ISO_date, ISO_time)
     quants = quantify_images(labels)
