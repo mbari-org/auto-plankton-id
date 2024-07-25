@@ -23,8 +23,6 @@ from LCM.Publisher import LcmPublisher
 
 image_directory = '/NVMEDATA/highmag/images_to_classify'
 
-
-#print(image_directory)
 processing_interval = 30
 cameras_fps = 10 # frames per second
 imaged_volume = 0.0001 # volume in ml
@@ -67,17 +65,12 @@ def create_log_files():
     log_directory = "classification_logs"
     os.makedirs(log_directory, exist_ok = True)
 
-
-    #logger.add(os.path.join(log_directory , "classification.log"), colorize = True, rotation = "00:00", format = "{time!UTC:%Y-%m-%dT%H:%M:%S} <level>{message}</level> {message}", catch = True, backtrace = True, diagnose = True)
-    
     logger.add(os.path.join(log_directory, "classification.log"), 
            colorize=True, 
            rotation="00:00", 
            catch=True, 
            backtrace=True, 
            diagnose=True)
-
-    pass
 
 def init_categoried_files():
     """ Creates the Categorized files that will eventually be populated with timestamped dirs with categorized images
@@ -156,7 +149,6 @@ def load_image(image_path, proc_settings):
             proc_settings, 
             save_to_disk=False,
         )
-    #print(image_path)
     return output['image'], os.path.split(image_path)[1]
 
 @logger.catch
@@ -206,13 +198,10 @@ def classify_images(image_list, img_names, ISO_date, ISO_time):
 
     # Print statements for testing:
     for i in range(len(label_counts)):
-        print(f"Number of {categorized_list[i]} classified: {label_counts[i]}")
-
         logger.info(f"Number of {categorized_list[i]} classified: {label_counts[i]}")
 
     end_time = time.perf_counter()
 
-    print (f"Classify images took: {((end_time - start_time) ):.03f}")
     logger.info(f"Classify images took: {((end_time - start_time) ):.03f}")
 
 
@@ -250,7 +239,6 @@ def process_images(image_directory, proc_settings):
     # Label images
     #lables = classify_images(processed_image_list)
     end_time = time.perf_counter()
-    print (f"Process images took: {((end_time - start_time) ):.03f}")
     logger.info(f"Process images took: {((end_time - start_time) ):.03f}")
 
     return processed_image_list, img_name_list
@@ -272,10 +260,9 @@ def quantify_images(labels, elapsed_time=30):
         counts[l] += 1
         
     expected_concentration = counts / (elapsed_time * cameras_fps * imaged_volume) 
-    #print(expected_concentration)
     end_time = time.perf_counter()
-    print (f"Quantify images took: {((end_time - start_time) ):.03f}")
     logger.info(f"Quantify images took: {((end_time - start_time) ):.03f}")
+    logger.info(f"Expected_concentration: {expected_concentration}")
 
 
     return expected_concentration
@@ -335,7 +322,6 @@ if __name__=="__main__":
 
         images, img_names = process_images(image_directory, proc_settings)
     
-        print(f"Processed {len(images)} images.")
         logger.info(f"Processed {len(images)} images.")
 
         labels = classify_images(images, img_names, ISO_date, ISO_time)
@@ -343,7 +329,6 @@ if __name__=="__main__":
         publish_to_slate(quants, pub)
         elapsed_time = time.time() - current_time
         if elapsed_time < processing_interval:
-            print('sleeping for ' + str(processing_interval - elapsed_time) + ' seconds')
             logger.info('sleeping for ' + str(processing_interval - elapsed_time) + ' seconds')
             time.sleep(processing_interval - elapsed_time)
         
