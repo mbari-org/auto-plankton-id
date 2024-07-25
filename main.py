@@ -8,6 +8,8 @@ import time
 import random
 import libs.cvtools as cvtools
 ####Import logging to log everything this program prints
+import loguru import logger
+
 import numpy as np
 import torch
 #import torchvision.models as models 
@@ -19,7 +21,11 @@ import datetime
 
 from LCM.Publisher import LcmPublisher 
 
-image_directory = '/NVMEDATA/highmag/images_to_classify'
+#image_directory = '/NVMEDATA/highmag/images_to_classify'
+
+image_directory = os.path.join("NVMEDATA", "highmag")
+image_directory = os.path.join(image_directory, "images_to_classify")
+
 processing_interval = 30
 cameras_fps = 10 # frames per second
 imaged_volume = 0.0001 # volume in ml
@@ -57,6 +63,16 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
+def create_log_files():
+
+    # Create the log directories
+    log_directory = "classification_logs"
+    os.makedirs(log_directory, exist_ok = True)
+
+
+    logger.add(os.path.join(log_directory , "classification.log"), rotation = "00:00", format = "{time!UTC} {level} {message}")
+    pass
+
 def init_categoried_files():
     """ Creates the Categorized files that will eventually be populated with timestamped dirs with categorized images
 
@@ -71,12 +87,13 @@ def init_categoried_files():
     current_dir = "/NVMEDATA"
     try:
         for entry in categorized_list:
-            path = os.path.join(current_dir, "Categorized")
+            path = os.path.join(current_dir, "categorized")
             path = os.path.join(path, entry)
             os.makedirs(path, exist_ok = True)
     except OSError as error:
         print(error)
 
+@logger.catch
 def save_categoried_image(image, label, name, ISO_date, ISO_time):
     """Saves labeled image in specific folders
 
@@ -92,7 +109,7 @@ def save_categoried_image(image, label, name, ISO_date, ISO_time):
 
     
     path = "/NVMEDATA"
-    path = os.path.join(path, "Categorized")
+    path = os.path.join(path, "categorized")
 
     # Organize the images. Wanted a switch statement but python version was too old
     label = labels_map[label]
@@ -107,22 +124,14 @@ def save_categoried_image(image, label, name, ISO_date, ISO_time):
     else:
         path = os.path.join(path, "Other")
     
-    # This is to debug in case their is an issue in making the directory
-    try:
-        path = os.path.join(path, ISO_date)
-        path = os.path.join(path, ISO_time)
-        os.makedirs(path, exist_ok=True)
-    except OSError as error:
-        print("error in making directory")
+    path = os.path.join(path, ISO_date)
+    path = os.path.join(path, ISO_time)
+    os.makedirs(path, exist_ok=True)
 
-    # This is to debug in case their is an issue in making the categorized image
-    try:
-        path = os.path.join(path, name)
-        cv2.imwrite(path+'.jpg', image)
-    except OSError as error:
-        print("error in making image")  
+    path = os.path.join(path, name)
+    cv2.imwrite(path+'.jpg', image)
 
-
+@logger.catch
 def load_image(image_path, proc_settings):
     """ loads a raw tif image from disk and convertSAVE_IMAGESs to a processed image
 
@@ -144,6 +153,7 @@ def load_image(image_path, proc_settings):
     #print(image_path)
     return output['image'], os.path.split(image_path)[1]
 
+@logger.catch
 def classify_images(image_list, img_names, ISO_date, ISO_time):
     """ Using a trained model, convert images to labels and return them
 
@@ -195,6 +205,13 @@ def classify_images(image_list, img_names, ISO_date, ISO_time):
     print(f"Number of {categorized_list[3]} classified: {label_counts[3]}")
     print(f"Number of {categorized_list[4]} classified: {label_counts[4]}")
 
+
+    logger.info(f"Number of {categorized_list[0]} classified: {label_counts[0]}")
+    logger.info(f"Number of {categorized_list[1]} classified: {label_counts[1]}")
+    logger.info(f"Number of {categorized_list[2]} classified: {label_counts[2]}")
+    logger.info(f"Number of {categorized_list[3]} classified: {label_counts[3]}")
+    logger.info(f"Number of {categorized_list[4]} classified: {label_counts[4]}")
+
     end_time = time.perf_counter()
 
     print (f"Classify images took: {((end_time - start_time) ):.03f}")
@@ -202,6 +219,7 @@ def classify_images(image_list, img_names, ISO_date, ISO_time):
 
     return labels
 
+@logger.catch
 def process_images(image_directory, proc_settings):
     """ load and process a directory of images, removing each image that is processed
 
@@ -238,6 +256,7 @@ def process_images(image_directory, proc_settings):
 
     return processed_image_list, img_name_list
 
+@logger.catch
 def quantify_images(labels, elapsed_time=30):
     """ Convert labels into quantitative abundance estimates
 
@@ -260,6 +279,7 @@ def quantify_images(labels, elapsed_time=30):
 
     return expected_concentration
 
+@logger.catch
 def publish_to_slate(expected_concentration, pub):
     """ publish concentration estimate to the tethys_slate channel
 
@@ -281,6 +301,8 @@ def publish_to_slate(expected_concentration, pub):
 
 
 if __name__=="__main__":
+
+    create_log_files()
 
     # public channels 
     lcm_url = 'udpm://239.255.76.67:7667?ttl=1'
