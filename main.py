@@ -26,6 +26,7 @@ image_directory = '/NVMEDATA/highmag/images_to_classify'
 processing_interval = 30
 cameras_fps = 10 # frames per second
 imaged_volume = 0.0001 # volume in ml
+model_used = 'HM_model.pth'
 
 labels_map = {
     0: "Aggregate",
@@ -304,11 +305,13 @@ if __name__=="__main__":
         proc_settings = json.load(file)
 
     # load machine learning model
-    model = torch.load('HM_model.pth')
+    model = torch.load(model_used)
     model.eval()  # Set the model to evaluation mode
     torch.no_grad()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
+
+    logger.info(f"Using {model_used} for photoplankton classification.")
 
     # create inital categorized files
     init_categoried_files()
