@@ -2,3 +2,5 @@ LCM/
 *.pyc
 *.tif
 *.jpg
+*.log
+*.pth
